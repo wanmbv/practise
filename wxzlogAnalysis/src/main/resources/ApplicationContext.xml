@@ -1,0 +1,61 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:hdp="http://www.springframework.org/schema/hadoop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+      	http://www.springframework.org/schema/batch	http://www.springframework.org/schema/batch/spring-batch.xsd
+      	http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+      	http://www.springframework.org/schema/hadoop http://www.springframework.org/schema/hadoop/spring-hadoop.xsd">
+
+    <context:property-placeholder location="hadoop.properties"/>
+
+    <bean id="jobRepository" class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean"/>
+    <bean id="transactionManager" class="org.springframework.batch.support.transaction.ResourcelessTransactionManager"/>
+    <bean id="jobLauncher" class="org.springframework.batch.core.launch.support.SimpleJobLauncher" p:jobRepository-ref="jobRepository"/>
+
+    <hdp:configuration>
+        fs.defaultFS=${hd.fs}
+        yarn.resourcemanager.address=${hd.rm}
+        mapreduce.framework.name=yarn
+        mapreduce.jobhistory.address=${hd.jh}
+        yarn.resourcemanager.scheduler.address=${hd.rms}
+    </hdp:configuration>
+
+    <hdp:script id="setupScript" location="file-prep.groovy" run-at-startup="true">
+        <hdp:property name="localSourceFile" value="${app.home}/${localSourceFile}"/>
+        <hdp:property name="inputDir" value="${log.input.path}"/>
+        <hdp:property name="outputDir" value="${log.output.path}"/>
+    </hdp:script>
+
+    <!-- required since Hadoop Job is a class not an interface and we need to use a Job with step scope to access #{jobParameters['...']} -->
+    <bean class="org.springframework.batch.core.scope.StepScope">
+        <property name="proxyTargetClass" value="true"/>
+    </bean>
+
+    <job id="job" xmlns="http://www.springframework.org/schema/batch">
+        <step id="logAnalysis" next="result-step">
+            <tasklet ref="logAnalysis-tasklet" />
+        </step>
+        <step id="result-step">
+            <tasklet ref="results"/>
+        </step>
+    </job>
+
+    <hdp:job-tasklet id="logAnalysis-tasklet" job-ref="logAnalysisJob" scope="step"/>
+
+    <hdp:job id="logAnalysisJob"
+             input-path="${log.input.path}"
+             output-path="${log.output.path}"
+             jar="file:${app.repo}/logAnalysis-1.0.jar"
+             mapper="com.practise.mr.LogAnalysis$LogAnalysisMapper"
+             reducer="com.practise.mr.LogAnalysis$LogAnalysisReducer"
+             scope="step" />
+
+    <hdp:script-tasklet id="results" scope="step">
+        <hdp:script location="classpath:results.groovy">
+            <hdp:property name="outputDir" value="${log.output.path}"/>
+        </hdp:script>
+    </hdp:script-tasklet>
+
+</beans>

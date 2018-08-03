@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>wxz.logAnalysis</groupId>
+    <artifactId>logAnalysis</artifactId>
+    <version>1.0</version>
+    <name>日志分析</name>
+
+    <properties>
+        <spring.hadoop.version>2.4.0.RELEASE-hdp24</spring.hadoop.version>
+        <hadoop.version>2.7.1.2.4.2.6-1</hadoop.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+            <version>${hadoop.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-hadoop</artifactId>
+            <version>2.5.0.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <version>1.8.5</version>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+    <repositories>
+        <repository>
+            <id>hortonworks</id>
+            <url>http://repo.hortonworks.com/content/repositories/releases</url>
+        </repository>
+        <repository>
+            <id>hortonworks-jetty</id>
+            <url>http://repo.hortonworks.com/content/repositories/jetty-hadoop</url>
+        </repository>
+        <repository>
+            <id>spring-milestone</id>
+            <url>http://repo.spring.io/libs-milestone</url>
+        </repository>
+    </repositories>
+    <build>
+        <!-- 强制设置JDK编译版本为1.8 -->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>appassembler-maven-plugin</artifactId>
+                <version>1.2.2</version>
+                <configuration>
+                    <repositoryLayout>flat</repositoryLayout>
+                    <configurationSourceDirectory>src/main/config</configurationSourceDirectory>
+                    <copyConfigurationDirectory>true</copyConfigurationDirectory>
+                    <!-- Extra JVM arguments that will be included in the bin scripts -->
+                    <extraJvmArguments>-Xms512m -Xmx1024m</extraJvmArguments>
+                    <programs>
+                        <program>
+                            <mainClass>App</mainClass>
+                            <name>logAnalysis</name>
+                        </program>
+                    </programs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>package</id>
+                        <goals>
+                            <goal>assemble</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>config</id>
+                        <phase>package</phase>
+                        <configuration>
+                            <tasks>
+                                <copy todir="target/appassembler/data">
+                                    <fileset dir="data"/>
+                                </copy>
+                                <copy todir="target/appassembler/etc">
+                                    <fileset dir="etc/hdp22"/>
+                                </copy>
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
